@@ -1,0 +1,221 @@
+@extends('layouts.app')
+
+@section('content')
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2><i class="bi bi-clipboard-check"></i> Checklist for {{ $checklist->property->name }}</h2>
+            <p class="text-muted">Scheduled: {{ $checklist->scheduled_date->format('M d, Y') }}</p>
+        </div>
+    </div>
+
+    @if($checklist->status === 'pending')
+        <div class="card mb-4">
+            <div class="card-body">
+                <h4><i class="bi bi-geo-alt"></i> Start Checklist</h4>
+                <p>To begin, we need to verify your location. Please allow location access when prompted.</p>
+                <button id="startBtn" class="btn btn-success btn-lg">
+                    <i class="bi bi-play-circle"></i> Start Checklist
+                </button>
+                <div id="locationStatus" class="mt-3"></div>
+            </div>
+        </div>
+    @else
+        <div class="row">
+            <div class="col-md-8">
+                @foreach($checklist->property->rooms as $room)
+                    <div class="card mb-3">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">{{ $room->name }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Photo Upload Section -->
+                            <div class="mb-3">
+                                <h6>Photos (Minimum {{ $room->min_photos }} required)</h6>
+                                <div class="row">
+                                    @foreach($checklist->photos->where('room_id', $room->id) as $photo)
+                                        <div class="col-md-3 mb-2">
+                                            <img src="{{ Storage::url($photo->file_path) }}" class="img-thumbnail" alt="Photo">
+                                            <small class="d-block text-muted">{{ $photo->taken_at->format('g:i A') }}</small>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <input type="file" class="form-control photo-upload mt-2" data-room-id="{{ $room->id }}" accept="image/*" capture="environment" multiple>
+                                <small class="text-muted">Photos: {{ $checklist->photos->where('room_id', $room->id)->count() }} / {{ $room->min_photos }} (You can select multiple photos at once)</small>
+                            </div>
+
+                            <!-- Tasks for this room -->
+                            <h6>Tasks:</h6>
+                            @foreach($checklist->items->where('room_id', $room->id) as $item)
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input task-checkbox" type="checkbox" 
+                                           id="task{{ $item->id }}" 
+                                           data-item-id="{{ $item->id }}"
+                                           {{ $item->is_completed ? 'checked' : '' }}>
+                                    <label class="form-check-label {{ $item->is_completed ? 'text-decoration-line-through' : '' }}" for="task{{ $item->id }}">
+                                        {{ $item->task->name }}
+                                        @if($item->task->description)
+                                            <small class="text-muted d-block">{{ $item->task->description }}</small>
+                                        @endif
+                                    </label>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="col-md-4">
+                <div class="card position-sticky" style="top: 20px;">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Progress</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Property:</strong> {{ $checklist->property->name }}</p>
+                        <p><strong>Status:</strong> 
+                            <span class="badge bg-{{ $checklist->status_color }}">
+                                {{ ucfirst($checklist->status) }}
+                            </span>
+                        </p>
+                        <p><strong>Started:</strong> {{ $checklist->started_at?->format('g:i A') }}</p>
+                        
+                        <hr>
+                        
+                        <p><strong>Tasks Completed:</strong><br>
+                            {{ $checklist->items->where('is_completed', true)->count() }} / {{ $checklist->items->count() }}
+                        </p>
+
+                        <p><strong>Photos Uploaded:</strong><br>
+                            {{ $checklist->photos->count() }} / {{ $checklist->property->rooms->sum('min_photos') }}
+                        </p>
+
+                        <hr>
+
+                        @if($checklist->status === 'in_progress')
+                            <a href="{{ route('housekeeper.checklist.summary', $checklist) }}" class="btn btn-success btn-lg w-100">
+                                <i class="bi bi-clipboard-check"></i> Review & Submit Checklist
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+</div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Start checklist with GPS
+    const startBtn = document.getElementById('startBtn');
+    if (startBtn) {
+        startBtn.addEventListener('click', function() {
+            const statusDiv = document.getElementById('locationStatus');
+            statusDiv.innerHTML = '<div class="alert alert-info">Getting your location...</div>';
+
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        fetch('{{ route("housekeeper.checklist.start", $checklist) }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({
+                                latitude: position.coords.latitude,
+                                longitude: position.coords.longitude
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            window.location.reload();
+                        });
+                    },
+                    function(error) {
+                        statusDiv.innerHTML = '<div class="alert alert-danger">Unable to get location. Please enable location services.</div>';
+                    }
+                );
+            } else {
+                statusDiv.innerHTML = '<div class="alert alert-danger">Geolocation is not supported by your browser.</div>';
+            }
+        });
+    }
+
+    // Handle task completion
+    document.querySelectorAll('.task-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const itemId = this.dataset.itemId;
+            fetch(`{{ route('housekeeper.checklist.show', $checklist) }}/item/${itemId}/complete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            });
+        });
+    });
+
+    // Handle photo uploads
+    document.querySelectorAll('.photo-upload').forEach(input => {
+        input.addEventListener('change', function() {
+            const roomId = this.dataset.roomId;
+            const files = this.files;
+            
+            if (files.length > 0) {
+                const formData = new FormData();
+                
+                // Append all selected files
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('photos[]', files[i]);
+                }
+                formData.append('room_id', roomId);
+
+                if ("geolocation" in navigator) {
+                    navigator.geolocation.getCurrentPosition(function(position) {
+                        formData.append('latitude', position.coords.latitude);
+                        formData.append('longitude', position.coords.longitude);
+                        uploadPhoto(formData, files.length);
+                    }, function() {
+                        uploadPhoto(formData, files.length);
+                    });
+                } else {
+                    uploadPhoto(formData, files.length);
+                }
+            }
+        });
+    });
+
+    function uploadPhoto(formData, fileCount) {
+        // Show uploading message
+        const statusDiv = document.createElement('div');
+        statusDiv.className = 'alert alert-info mt-2';
+        statusDiv.textContent = 'Uploading ' + fileCount + ' photo(s)...';
+        document.querySelector('.photo-upload').parentElement.appendChild(statusDiv);
+
+        fetch('{{ route("housekeeper.checklist.photo.upload", $checklist) }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                statusDiv.className = 'alert alert-danger mt-2';
+                statusDiv.textContent = 'Upload failed. Please try again.';
+            }
+        })
+        .catch(error => {
+            statusDiv.className = 'alert alert-danger mt-2';
+            statusDiv.textContent = 'Upload failed. Please try again.';
+        });
+    }
+    }
+});
+</script>
+@endpush
+@endsection
