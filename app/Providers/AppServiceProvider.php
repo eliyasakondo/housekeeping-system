@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use App\Models\Property;
 use App\Models\Checklist;
 use App\Policies\PropertyPolicy;
@@ -24,6 +25,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Force HTTPS in production
+        if (config('app.env') === 'production') {
+            URL::forceScheme('https');
+        }
+
         Gate::policy(Property::class, PropertyPolicy::class);
         Gate::policy(Checklist::class, ChecklistPolicy::class);
     }
