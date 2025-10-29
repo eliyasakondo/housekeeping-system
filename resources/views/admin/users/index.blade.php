@@ -33,6 +33,7 @@
                             <th>Name</th>
                             <th>Email</th>
                             <th>Role</th>
+                            <th>Owner</th>
                             <th>Phone</th>
                             <th>Created</th>
                             <th>Actions</th>
@@ -47,6 +48,15 @@
                                     <span class="badge bg-{{ $user->role === 'admin' ? 'danger' : ($user->role === 'owner' ? 'primary' : 'success') }}">
                                         {{ ucfirst($user->role) }}
                                     </span>
+                                </td>
+                                <td>
+                                    @if($user->role === 'housekeeper' && $user->owner)
+                                        <small class="text-muted">{{ $user->owner->name }}</small>
+                                    @elseif($user->role === 'housekeeper' && !$user->owner)
+                                        <span class="badge bg-warning text-dark">No Owner</span>
+                                    @else
+                                        -
+                                    @endif
                                 </td>
                                 <td>{{ $user->phone ?? '-' }}</td>
                                 <td>{{ $user->created_at->format('M d, Y') }}</td>

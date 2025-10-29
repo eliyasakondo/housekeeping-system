@@ -63,14 +63,19 @@ class PropertyController extends Controller
             'address' => 'required|string',
             'beds' => 'required|integer|min:0',
             'baths' => 'required|integer|min:0',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+        ], [
+            'latitude.required' => 'GPS Latitude is required for housekeeper location verification.',
+            'longitude.required' => 'GPS Longitude is required for housekeeper location verification.',
+            'latitude.between' => 'Latitude must be between -90 and 90 degrees.',
+            'longitude.between' => 'Longitude must be between -180 and 180 degrees.',
         ]);
 
         $property = Property::create($validated);
 
         return redirect()->route('admin.properties.index')
-            ->with('success', 'Property created successfully!');
+            ->with('success', 'Property created successfully with GPS coordinates!');
     }
 
     /**
@@ -80,7 +85,7 @@ class PropertyController extends Controller
     {
         $property->load([
             'owner',
-            'rooms',
+            'rooms.tasks',
             'checklists.housekeeper',
             'checklists' => function($query) {
                 $query->latest()->take(10);
@@ -96,7 +101,10 @@ class PropertyController extends Controller
             'total_rooms' => $property->rooms()->count(),
         ];
 
-        return view('admin.properties.show', compact('property', 'stats'));
+        // Get all available tasks for assignment (all tasks are accessible to admin)
+        $availableTasks = \App\Models\Task::orderBy('name')->get();
+
+        return view('admin.properties.show', compact('property', 'stats', 'availableTasks'));
     }
 
     /**
@@ -145,6 +153,112 @@ class PropertyController extends Controller
         $property->delete();
 
         return redirect()->route('admin.properties.index')
-            ->with('success', 'Property and its rooms deleted successfully!');
+            ->with('success', 'Property deleted successfully!');
+    }
+
+    /**
+     * Add a room to a property
+     */
+    public function storeRoom(Request $request, Property $property)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'min_photos' => 'required|integer|min:1|max:50',
+        ]);
+
+        $property->rooms()->create([
+            'name' => $validated['name'],
+            'min_photos' => $validated['min_photos'],
+            'is_default' => false,
+        ]);
+
+        return back()->with('success', "Room '{$validated['name']}' added successfully!");
+    }
+
+    /**
+     * Delete a room from a property
+     */
+    public function destroyRoom(Property $property, $roomId)
+    {
+        $room = $property->rooms()->findOrFail($roomId);
+        $roomName = $room->name;
+        $room->delete();
+
+        return back()->with('success', "Room '{$roomName}' deleted successfully!");
+    }
+
+    /**
+     * Add default rooms to a property
+     */
+    public function addDefaultRooms(Property $property)
+    {
+        $defaultRooms = [
+            ['name' => 'Living Room', 'min_photos' => 8],
+            ['name' => 'Kitchen', 'min_photos' => 8],
+            ['name' => 'Bedroom', 'min_photos' => 8],
+            ['name' => 'Bathroom', 'min_photos' => 8],
+            ['name' => 'Dining Room', 'min_photos' => 8],
+            ['name' => 'Laundry Room', 'min_photos' => 8],
+            ['name' => 'Garage', 'min_photos' => 8],
+            ['name' => 'Patio/Deck', 'min_photos' => 8],
+            ['name' => 'Pool Area', 'min_photos' => 8],
+        ];
+
+        $added = 0;
+        $skipped = 0;
+
+        foreach ($defaultRooms as $roomData) {
+            // Check if room with this name already exists
+            $exists = $property->rooms()->where('name', $roomData['name'])->exists();
+            
+            if (!$exists) {
+                $property->rooms()->create([
+                    'name' => $roomData['name'],
+                    'min_photos' => $roomData['min_photos'],
+                    'is_default' => true,
+                ]);
+                $added++;
+            } else {
+                $skipped++;
+            }
+        }
+
+        $message = $added > 0 
+            ? "{$added} default room(s) added successfully!" . ($skipped > 0 ? " ({$skipped} already existed)" : "")
+            : "All default rooms already exist.";
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * Attach a task to a room
+     */
+    public function attachTask(Request $request, Property $property, $roomId)
+    {
+        $validated = $request->validate([
+            'task_id' => 'required|exists:tasks,id',
+        ]);
+
+        $room = $property->rooms()->findOrFail($roomId);
+        
+        // Check if task is already attached
+        if ($room->tasks()->where('task_id', $validated['task_id'])->exists()) {
+            return back()->with('error', 'This task is already assigned to this room.');
+        }
+
+        $room->tasks()->attach($validated['task_id']);
+
+        return back()->with('success', 'Task assigned to room successfully!');
+    }
+
+    /**
+     * Detach a task from a room
+     */
+    public function detachTask(Property $property, $roomId, $taskId)
+    {
+        $room = $property->rooms()->findOrFail($roomId);
+        $room->tasks()->detach($taskId);
+
+        return back()->with('success', 'Task removed from room successfully!');
     }
 }

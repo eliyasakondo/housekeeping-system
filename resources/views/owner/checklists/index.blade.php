@@ -173,13 +173,21 @@
                         <select class="form-select form-select-lg" name="property_id" required>
                             <option value="">-- Select Property --</option>
                             @foreach($properties as $property)
-                                <option value="{{ $property->id }}">
+                                <option value="{{ $property->id }}" {{ !$property->is_ready ? 'disabled' : '' }}>
                                     {{ $property->name }}
+                                    @if(!$property->is_ready)
+                                        -  Not Ready (No tasks assigned)
+                                    @else
+                                        ✓
+                                    @endif
                                 </option>
                             @endforeach
                         </select>
                         <small class="text-muted">
                             <i class="bi bi-info-circle"></i> Which property needs cleaning?
+                            @if($properties->where('is_ready', false)->count() > 0)
+                                <br><span class="text-warning"><i class="bi bi-exclamation-triangle"></i> Some properties are not ready because they have no tasks assigned to rooms.</span>
+                            @endif
                         </small>
                     </div>
 

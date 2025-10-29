@@ -57,6 +57,24 @@
                             @enderror
                         </div>
 
+                        <!-- Owner Selection (only shown when role is housekeeper) -->
+                        <div class="mb-3" id="owner-field" style="display: none;">
+                            <label for="owner_id" class="form-label">Assign to Owner *</label>
+                            <select class="form-select @error('owner_id') is-invalid @enderror" 
+                                    id="owner_id" name="owner_id">
+                                <option value="">Select Owner</option>
+                                @foreach($owners as $owner)
+                                    <option value="{{ $owner->id }}" {{ old('owner_id') == $owner->id ? 'selected' : '' }}>
+                                        {{ $owner->name }} ({{ $owner->email }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('owner_id')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="text-muted">Select which property owner this housekeeper will work for</small>
+                        </div>
+
                         <div class="mb-3">
                             <label for="phone" class="form-label">Phone Number</label>
                             <input type="text" class="form-control @error('phone') is-invalid @enderror" 
@@ -80,4 +98,32 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const roleSelect = document.getElementById('role');
+    const ownerField = document.getElementById('owner-field');
+    const ownerSelect = document.getElementById('owner_id');
+    
+    function toggleOwnerField() {
+        if (roleSelect.value === 'housekeeper') {
+            ownerField.style.display = 'block';
+            ownerSelect.setAttribute('required', 'required');
+        } else {
+            ownerField.style.display = 'none';
+            ownerSelect.removeAttribute('required');
+            ownerSelect.value = '';
+        }
+    }
+    
+    // Check on page load (for old input)
+    toggleOwnerField();
+    
+    // Check on role change
+    roleSelect.addEventListener('change', toggleOwnerField);
+});
+</script>
+@endpush
+
 @endsection

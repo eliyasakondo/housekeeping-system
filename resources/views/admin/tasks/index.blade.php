@@ -42,19 +42,24 @@
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th>Task Name</th>
-                                    <th>Type</th>
-                                    <th>Property</th>
-                                    <th>Room</th>
-                                    <th>Created</th>
-                                    <th>Actions</th>
+                                    <th style="width: 25%;">Task Name</th>
+                                    <th style="width: 10%;">Type</th>
+                                    <th style="width: 20%;">Property</th>
+                                    <th style="width: 15%;">Room</th>
+                                    <th style="width: 10%;">Created</th>
+                                    <th style="width: 20%;" class="text-end">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($tasks as $task)
                                 <tr>
                                     <td>
-                                        <strong>{{ $task->name }}</strong>
+                                        <div>
+                                            <strong>{{ $task->name }}</strong>
+                                            @if($task->description)
+                                                <br><small class="text-muted">{{ Str::limit($task->description, 50) }}</small>
+                                            @endif
+                                        </div>
                                     </td>
                                     <td>
                                         @if($task->is_default)
@@ -73,11 +78,29 @@
                                         @endif
                                     </td>
                                     <td>
-                                        @if($task->rooms && $task->rooms->count() > 0)
+                                        @php
+                                            // Check if task has many-to-many rooms relationship data
+                                            $manyRooms = $task->rooms && $task->rooms->count() > 0;
+                                            // Check if task has single room_id (direct foreign key)
+                                            $singleRoomId = $task->room_id ?? null;
+                                        @endphp
+                                        
+                                        @if($manyRooms)
+                                            {{-- Display many-to-many rooms --}}
                                             @if($task->rooms->count() <= 2)
                                                 {{ $task->rooms->pluck('name')->join(', ') }}
                                             @else
-                                                {{ $task->rooms->count() }} rooms
+                                                <span class="badge bg-info">{{ $task->rooms->count() }} rooms</span>
+                                            @endif
+                                        @elseif($singleRoomId)
+                                            {{-- Display single room from room_id --}}
+                                            @php
+                                                $singleRoom = \App\Models\Room::find($singleRoomId);
+                                            @endphp
+                                            @if($singleRoom)
+                                                {{ $singleRoom->name }}
+                                            @else
+                                                <span class="text-muted">Room not found</span>
                                             @endif
                                         @else
                                             <span class="text-muted">All Rooms</span>
@@ -88,17 +111,23 @@
                                             {{ $task->created_at->format('M d, Y') }}
                                         </small>
                                     </td>
-                                    <td>
+                                    <td class="text-end">
                                         <div class="btn-group btn-group-sm" role="group">
-                                            <a href="{{ route('admin.tasks.edit', $task) }}" class="btn btn-outline-primary">
-                                                <i class="bi bi-pencil"></i> Edit
+                                            <a href="{{ route('admin.tasks.edit', $task) }}" 
+                                               class="btn btn-outline-primary"
+                                               title="Edit Task">
+                                                <i class="bi bi-pencil"></i>
                                             </a>
-                                            <form action="{{ route('admin.tasks.destroy', $task) }}" method="POST" class="d-inline" 
-                                                  onsubmit="return confirm('Are you sure you want to delete this task?');">
+                                            <form action="{{ route('admin.tasks.destroy', $task) }}" 
+                                                  method="POST" 
+                                                  class="d-inline" 
+                                                  onsubmit="return confirm('Are you sure you want to delete this task? This will remove it from all rooms and future checklists.');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-outline-danger">
-                                                    <i class="bi bi-trash"></i> Delete
+                                                <button type="submit" 
+                                                        class="btn btn-outline-danger"
+                                                        title="Delete Task">
+                                                    <i class="bi bi-trash"></i>
                                                 </button>
                                             </form>
                                         </div>

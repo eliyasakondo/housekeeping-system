@@ -17,8 +17,17 @@ class CalendarController extends Controller
 
     public function index()
     {
-        // Get owner's properties and housekeepers
-        $properties = auth()->user()->properties;
+        // Get owner's properties with readiness status
+        $properties = auth()->user()->properties()->with('rooms.tasks')->get();
+        
+        // Add a flag to indicate if property is ready for assignment
+        $properties->each(function($property) {
+            $property->is_ready = $property->rooms->count() > 0 && 
+                                  $property->rooms->contains(function($room) {
+                                      return $room->tasks->count() > 0;
+                                  });
+        });
+        
         $housekeepers = User::where('role', 'housekeeper')
             ->where('owner_id', auth()->id())
             ->get();
@@ -35,10 +44,17 @@ class CalendarController extends Controller
 
         // Format for calendar
         $events = $checklists->map(function($checklist) {
+            // Combine date and time if time is set
+            $startDateTime = $checklist->scheduled_date->format('Y-m-d');
+            if ($checklist->scheduled_time) {
+                $startDateTime .= ' ' . $checklist->scheduled_time;
+            }
+
             return [
                 'id' => $checklist->id,
                 'title' => $checklist->property->name . ' - ' . $checklist->housekeeper->name,
-                'start' => $checklist->scheduled_date->format('Y-m-d'),
+                'start' => $startDateTime,
+                'allDay' => !$checklist->scheduled_time, // Only all-day if no time is set
                 'backgroundColor' => $this->getStatusColor($checklist->status),
                 'borderColor' => $this->getStatusColor($checklist->status),
                 'extendedProps' => [
@@ -46,6 +62,7 @@ class CalendarController extends Controller
                     'housekeeper' => $checklist->housekeeper->name,
                     'status' => $checklist->status,
                     'checklist_id' => $checklist->id,
+                    'scheduled_time' => $checklist->scheduled_time,
                 ]
             ];
         });
@@ -72,6 +89,31 @@ class CalendarController extends Controller
             ->where('role', 'housekeeper')
             ->where('owner_id', auth()->id())
             ->firstOrFail();
+
+        // Check if property has any rooms
+        $roomCount = $property->rooms()->count();
+        if ($roomCount === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot create assignment: This property has no rooms. Please add rooms first.'
+            ], 422);
+        }
+
+        // Check if property has any tasks assigned to rooms
+        $hasTasksAssigned = false;
+        foreach ($property->rooms as $room) {
+            if ($room->tasks()->count() > 0) {
+                $hasTasksAssigned = true;
+                break;
+            }
+        }
+
+        if (!$hasTasksAssigned) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot create assignment: No tasks have been assigned to any rooms in this property. Please assign tasks to rooms first.'
+            ], 422);
+        }
 
         $checklist = Checklist::create([
             'property_id' => $validated['property_id'],
@@ -105,6 +147,26 @@ class CalendarController extends Controller
             'items' => $checklist->items,
             'photos' => $checklist->photos,
         ]);
+    }
+
+    public function quickAssign()
+    {
+        // Get owner's properties with readiness status
+        $properties = auth()->user()->properties()->with('rooms.tasks')->get();
+        
+        // Add a flag to indicate if property is ready for assignment
+        $properties->each(function($property) {
+            $property->is_ready = $property->rooms->count() > 0 && 
+                                  $property->rooms->contains(function($room) {
+                                      return $room->tasks->count() > 0;
+                                  });
+        });
+        
+        $housekeepers = User::where('role', 'housekeeper')
+            ->where('owner_id', auth()->id())
+            ->get();
+        
+        return view('owner.assign-housekeeper', compact('properties', 'housekeepers'));
     }
 
     public function destroy(Checklist $checklist)

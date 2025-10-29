@@ -38,6 +38,13 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('tasks', AdminTaskController::class);
     Route::resource('rooms', AdminRoomController::class);
     
+    // Property Room Management (for specific properties)
+    Route::post('/properties/{property}/rooms', [AdminPropertyController::class, 'storeRoom'])->name('properties.rooms.store');
+    Route::delete('/properties/{property}/rooms/{room}', [AdminPropertyController::class, 'destroyRoom'])->name('properties.rooms.destroy');
+    Route::post('/properties/{property}/rooms/add-defaults', [AdminPropertyController::class, 'addDefaultRooms'])->name('properties.rooms.add-defaults');
+    Route::post('/properties/{property}/rooms/{room}/tasks', [AdminPropertyController::class, 'attachTask'])->name('properties.rooms.attach-task');
+    Route::delete('/properties/{property}/rooms/{room}/tasks/{task}', [AdminPropertyController::class, 'detachTask'])->name('properties.rooms.detach-task');
+    
     // Checklist management
     Route::get('/checklists', [AdminChecklistController::class, 'index'])->name('checklists.index');
     Route::get('/checklists/{checklist}', [AdminChecklistController::class, 'show'])->name('checklists.show');
@@ -46,12 +53,22 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Calendar routes
     Route::get('/calendar', [AdminCalendarController::class, 'index'])->name('calendar');
     Route::get('/calendar/events', [AdminCalendarController::class, 'getEvents'])->name('calendar.events');
+    Route::post('/calendar/assign', [AdminCalendarController::class, 'store'])->name('calendar.assign');
     Route::get('/calendar/checklist/{checklist}', [AdminCalendarController::class, 'show'])->name('calendar.show');
+    Route::delete('/calendar/checklist/{checklist}', [AdminCalendarController::class, 'destroy'])->name('calendar.destroy');
+    
+    // Quick Assignment Page
+    Route::get('/assign-housekeeper', [AdminCalendarController::class, 'quickAssign'])->name('assign-housekeeper');
     
     // Settings routes
     Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings.index');
     Route::put('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
     Route::post('/settings/reset', [AdminSettingsController::class, 'reset'])->name('settings.reset');
+    
+    // User Guide
+    Route::get('/user-guide', function() {
+        return view('admin.user-guide');
+    })->name('user-guide');
     
     // Welcome tutorial dismissal
     Route::post('/welcome-tutorial/dismiss', [AdminDashboardController::class, 'dismissWelcomeTutorial'])->name('welcome.dismiss');
@@ -92,6 +109,14 @@ Route::middleware(['auth', 'role:owner'])->prefix('owner')->name('owner.')->grou
     Route::post('/calendar/assign', [OwnerCalendarController::class, 'store'])->name('calendar.assign');
     Route::get('/calendar/checklist/{checklist}', [OwnerCalendarController::class, 'show'])->name('calendar.show');
     Route::delete('/calendar/checklist/{checklist}', [OwnerCalendarController::class, 'destroy'])->name('calendar.destroy');
+    
+    // Quick Assignment Page
+    Route::get('/assign-housekeeper', [OwnerCalendarController::class, 'quickAssign'])->name('assign-housekeeper');
+    
+    // User Guide / Help Center
+    Route::get('/guide', function () {
+        return view('owner.guide');
+    })->name('guide');
 });
 
 // Housekeeper Routes
@@ -112,5 +137,10 @@ Route::middleware(['auth', 'role:housekeeper'])->prefix('housekeeper')->name('ho
     Route::post('/checklist/{checklist}/photo', [ChecklistController::class, 'uploadPhoto'])->name('checklist.photo.upload');
     Route::get('/checklist/{checklist}/summary', [ChecklistController::class, 'summary'])->name('checklist.summary');
     Route::post('/checklist/{checklist}/complete', [ChecklistController::class, 'complete'])->name('checklist.complete');
+    
+    // User Guide
+    Route::get('/user-guide', function() {
+        return view('housekeeper.user-guide');
+    })->name('user-guide');
 });
 

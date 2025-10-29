@@ -80,33 +80,134 @@
 
     <!-- Rooms List -->
     <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-door-open"></i> Rooms ({{ $property->rooms->count() }})</h5>
+        <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-door-open"></i> Rooms & Tasks Management</h5>
+            <div>
+                <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addRoomModal">
+                    <i class="bi bi-plus-circle"></i> Add Room
+                </button>
+                <form action="{{ route('admin.properties.rooms.add-defaults', $property) }}" method="POST" class="d-inline">
+                    @csrf
+                    <button type="submit" class="btn btn-info btn-sm">
+                        <i class="bi bi-lightning-fill"></i> Quick Add Default Rooms
+                    </button>
+                </form>
+            </div>
         </div>
         <div class="card-body">
             @if($property->rooms->count() > 0)
-                <div class="row">
-                    @foreach($property->rooms as $room)
-                        <div class="col-md-4 mb-3">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6>
-                                        <i class="bi bi-door-closed-fill"></i> {{ $room->name }}
-                                        @if($room->is_default)
-                                            <span class="badge bg-primary badge-sm">Default</span>
-                                        @endif
-                                    </h6>
-                                    <small class="text-muted">
-                                        Min. Photos: {{ $room->min_photos }}
-                                    </small>
-                                </div>
-                            </div>
+                @foreach($property->rooms as $room)
+                    <div class="card mb-3 border-start border-primary border-3">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="bi bi-door-closed-fill text-primary"></i> {{ $room->name }}
+                                @if($room->is_default)
+                                    <span class="badge bg-primary">Default</span>
+                                @endif
+                                <small class="text-muted">(Min. Photos: {{ $room->min_photos }})</small>
+                            </h6>
+                            <form action="{{ route('admin.properties.rooms.destroy', [$property, $room]) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this room?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i> Delete Room
+                                </button>
+                            </form>
                         </div>
-                    @endforeach
-                </div>
+                        <div class="card-body">
+                            <h6 class="text-muted mb-3">
+                                <i class="bi bi-list-task"></i> Assigned Tasks ({{ $room->tasks->count() }})
+                            </h6>
+                            
+                            @if($room->tasks->count() > 0)
+                                <div class="row">
+                                    @foreach($room->tasks as $task)
+                                        <div class="col-md-6 mb-2">
+                                            <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                                                <span>
+                                                    <i class="bi bi-check-circle text-success"></i> {{ $task->name }}
+                                                    @if($task->is_default)
+                                                        <span class="badge bg-secondary badge-sm">Global</span>
+                                                    @endif
+                                                </span>
+                                                <form action="{{ route('admin.properties.rooms.detach-task', [$property, $room, $task]) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="bi bi-x"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <p class="text-muted mb-3">No tasks assigned to this room yet.</p>
+                            @endif
+
+                            <!-- Add Task Form -->
+                            <form action="{{ route('admin.properties.rooms.attach-task', [$property, $room]) }}" method="POST" class="mt-3">
+                                @csrf
+                                <div class="input-group">
+                                    <select name="task_id" class="form-select" required>
+                                        <option value="">-- Select a task to add --</option>
+                                        @foreach($availableTasks as $task)
+                                            <option value="{{ $task->id }}">
+                                                {{ $task->name }}
+                                                @if($task->is_default)
+                                                    (Global Task)
+                                                @else
+                                                    (Owner's Task)
+                                                @endif
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="bi bi-plus"></i> Add Task
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                @endforeach
             @else
-                <p class="text-muted text-center py-4">No rooms added yet</p>
+                <div class="text-center py-5">
+                    <i class="bi bi-door-open" style="font-size: 3rem; opacity: 0.3;"></i>
+                    <p class="text-muted mt-2">No rooms added yet. Click "Add Room" or "Quick Add Default Rooms" to get started.</p>
+                </div>
             @endif
+        </div>
+    </div>
+
+    <!-- Add Room Modal -->
+    <div class="modal fade" id="addRoomModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Add New Room</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="{{ route('admin.properties.rooms.store', $property) }}" method="POST">
+                    @csrf
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="room_name" class="form-label">Room Name *</label>
+                            <input type="text" class="form-control" id="room_name" name="name" required placeholder="e.g., Master Bedroom">
+                        </div>
+                        <div class="mb-3">
+                            <label for="min_photos" class="form-label">Minimum Photos Required *</label>
+                            <input type="number" class="form-control" id="min_photos" name="min_photos" value="8" min="1" max="50" required>
+                            <small class="text-muted">Housekeepers must upload at least this many photos for this room.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Add Room
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 

@@ -57,21 +57,56 @@
                             @enderror
                         </div>
 
+                        <div class="alert alert-warning border-warning">
+                            <h6 class="alert-heading fw-bold mb-2">
+                                <i class="bi bi-geo-alt-fill me-2"></i>GPS Location Required for Housekeeper Check-In
+                            </h6>
+                            <p class="mb-0 small">
+                                <strong>MANDATORY:</strong> If you want your housekeepers to verify their location using GPS before starting work, 
+                                you <strong>MUST</strong> provide both Latitude and Longitude values for this property. 
+                                Without GPS coordinates, housekeepers will not be able to check in at the property location.
+                            </p>
+                        </div>
+
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="latitude" class="form-label">Latitude (Optional)</label>
-                                    <input type="number" step="0.00000001" class="form-control" 
-                                           id="latitude" name="latitude" value="{{ old('latitude', $property->latitude) }}">
+                                    <label for="latitude" class="form-label fw-bold">
+                                        <i class="bi bi-geo-alt me-1"></i>Latitude 
+                                        <span class="text-danger">(Required for GPS)</span>
+                                    </label>
+                                    <input type="number" step="0.00000001" class="form-control @error('latitude') is-invalid @enderror" 
+                                           id="latitude" name="latitude" value="{{ old('latitude', $property->latitude) }}"
+                                           placeholder="e.g., 40.7128">
+                                    <small class="text-muted">Example: 40.7128 (New York)</small>
+                                    @error('latitude')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="longitude" class="form-label">Longitude (Optional)</label>
-                                    <input type="number" step="0.00000001" class="form-control" 
-                                           id="longitude" name="longitude" value="{{ old('longitude', $property->longitude) }}">
+                                    <label for="longitude" class="form-label fw-bold">
+                                        <i class="bi bi-geo-alt me-1"></i>Longitude 
+                                        <span class="text-danger">(Required for GPS)</span>
+                                    </label>
+                                    <input type="number" step="0.00000001" class="form-control @error('longitude') is-invalid @enderror" 
+                                           id="longitude" name="longitude" value="{{ old('longitude', $property->longitude) }}"
+                                           placeholder="e.g., -74.0060">
+                                    <small class="text-muted">Example: -74.0060 (New York)</small>
+                                    @error('longitude')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="alert alert-info mb-3">
+                            <small>
+                                <i class="bi bi-lightbulb me-1"></i><strong>How to find GPS coordinates:</strong> 
+                                Search your property on <a href="https://www.google.com/maps" target="_blank" class="alert-link">Google Maps</a>, 
+                                right-click on the location, and select the coordinates to copy them.
+                            </small>
                         </div>
 
                         <div class="mb-3">

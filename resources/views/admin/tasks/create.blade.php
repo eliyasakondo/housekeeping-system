@@ -31,6 +31,21 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="description" class="form-label">Description (Optional)</label>
+                            <textarea class="form-control @error('description') is-invalid @enderror" 
+                                      id="description" 
+                                      name="description" 
+                                      rows="3"
+                                      placeholder="Add detailed instructions for this task...">{{ old('description') }}</textarea>
+                            @error('description')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">
+                                Provide specific instructions or notes for housekeepers
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
                             <label class="form-label">Task Type <span class="text-danger">*</span></label>
                             <div class="form-check">
                                 <input class="form-check-input @error('is_default') is-invalid @enderror" 

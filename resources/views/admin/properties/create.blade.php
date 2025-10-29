@@ -96,7 +96,16 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">GPS Coordinates (Optional)</label>
+                            <label class="form-label">
+                                GPS Coordinates 
+                                <span class="text-danger">*</span>
+                                <span class="badge bg-warning text-dark">Required for GPS Verification</span>
+                            </label>
+                            <div class="alert alert-info mb-2">
+                                <i class="bi bi-geo-alt-fill"></i> 
+                                <strong>Important:</strong> GPS coordinates are <strong>mandatory</strong> for location verification. 
+                                Housekeepers must be within <strong>100 meters</strong> of these coordinates to start a checklist.
+                            </div>
                             <div class="row">
                                 <div class="col-md-6">
                                     <input type="number" 
@@ -104,10 +113,12 @@
                                            name="latitude" 
                                            value="{{ old('latitude') }}" 
                                            step="0.000001"
+                                           required
                                            placeholder="Latitude (e.g., 37.7749)">
                                     @error('latitude')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                    <small class="text-muted d-block mt-1">North/South position</small>
                                 </div>
                                 <div class="col-md-6">
                                     <input type="number" 
@@ -115,13 +126,18 @@
                                            name="longitude" 
                                            value="{{ old('longitude') }}" 
                                            step="0.000001"
+                                           required
                                            placeholder="Longitude (e.g., -122.4194)">
                                     @error('longitude')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                    <small class="text-muted d-block mt-1">East/West position</small>
                                 </div>
                             </div>
-                            <small class="text-muted">Used for GPS verification when housekeepers start checklists</small>
+                            <small class="text-muted">
+                                <i class="bi bi-lightbulb"></i> 
+                                <strong>Tip:</strong> Use Google Maps to get exact coordinates: Right-click on location → Click on coordinates to copy
+                            </small>
                         </div>
 
                         <div class="d-flex gap-2">

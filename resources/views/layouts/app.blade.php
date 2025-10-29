@@ -398,6 +398,107 @@
             padding: 2rem;
         }
 
+        /* Toast Notification Styles */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 400px;
+        }
+
+        .toast-notification {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            transform: translateX(450px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            border-left: 4px solid;
+        }
+
+        .toast-notification.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .toast-notification i:first-child {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .toast-notification span {
+            flex: 1;
+            font-weight: 500;
+            color: #2d3748;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            color: #a0aec0;
+            cursor: pointer;
+            padding: 0;
+            font-size: 1.25rem;
+            transition: color 0.2s;
+        }
+
+        .toast-close:hover {
+            color: #2d3748;
+        }
+
+        .toast-success {
+            border-left-color: #10b981;
+        }
+
+        .toast-success i:first-child {
+            color: #10b981;
+        }
+
+        .toast-error {
+            border-left-color: #ef4444;
+        }
+
+        .toast-error i:first-child {
+            color: #ef4444;
+        }
+
+        .toast-info {
+            border-left-color: #3b82f6;
+        }
+
+        .toast-info i:first-child {
+            color: #3b82f6;
+        }
+
+        .toast-warning {
+            border-left-color: #f59e0b;
+        }
+
+        .toast-warning i:first-child {
+            color: #f59e0b;
+        }
+
+        @media (max-width: 576px) {
+            .toast-container {
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+
+            .toast-notification {
+                min-width: auto;
+            }
+        }
+
         /* Responsive Design */
         @media (max-width: 992px) {
             .sidebar {
@@ -494,7 +595,7 @@
                             <div class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('admin.rooms.*') ? 'active' : '' }}" href="{{ route('admin.rooms.index') }}">
                                     <i class="bi bi-door-open-fill"></i>
-                                    <span>Rooms</span>
+                                    <span>Default Rooms</span>
                                 </a>
                             </div>
                             <div class="nav-item">
@@ -522,11 +623,25 @@
                                 </a>
                             </div>
                             
+                            <div class="nav-section-title">Quick Actions</div>
+                            <div class="nav-item">
+                                <a class="nav-link featured {{ request()->routeIs('admin.assign-housekeeper') ? 'active' : '' }}" href="{{ route('admin.assign-housekeeper') }}">
+                                    <i class="bi bi-person-plus-fill"></i>
+                                    <span>Assign Housekeeper</span>
+                                </a>
+                            </div>
+                            
                             <div class="nav-section-title">System</div>
                             <div class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}" href="{{ route('admin.settings.index') }}">
                                     <i class="bi bi-gear-fill"></i>
                                     <span>Settings</span>
+                                </a>
+                            </div>
+                            <div class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('admin.user-guide') ? 'active' : '' }}" href="{{ route('admin.user-guide') }}">
+                                    <i class="bi bi-book-fill"></i>
+                                    <span>User Guide</span>
                                 </a>
                             </div>
 
@@ -570,6 +685,20 @@
                                     <span>Schedule Cleaning</span>
                                 </a>
                             </div>
+                            <div class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('owner.assign-housekeeper') ? 'active' : '' }}" href="{{ route('owner.assign-housekeeper') }}">
+                                    <i class="bi bi-person-plus-fill"></i>
+                                    <span>Assign Housekeeper</span>
+                                </a>
+                            </div>
+                            
+                            <div class="nav-section-title">Help & Support</div>
+                            <div class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('owner.guide') ? 'active' : '' }}" href="{{ route('owner.guide') }}">
+                                    <i class="bi bi-book-fill"></i>
+                                    <span>User Guide</span>
+                                </a>
+                            </div>
 
                         @elseif(auth()->user()->isHousekeeper())
                             <div class="nav-section-title">My Work</div>
@@ -583,6 +712,14 @@
                                 <a class="nav-link {{ request()->routeIs('housekeeper.calendar') ? 'active' : '' }}" href="{{ route('housekeeper.calendar') }}">
                                     <i class="bi bi-calendar-event-fill"></i>
                                     <span>My Schedule</span>
+                                </a>
+                            </div>
+                            
+                            <div class="nav-section-title">Help</div>
+                            <div class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('housekeeper.user-guide') ? 'active' : '' }}" href="{{ route('housekeeper.user-guide') }}">
+                                    <i class="bi bi-book-fill"></i>
+                                    <span>User Guide</span>
                                 </a>
                             </div>
                         @endif
@@ -653,6 +790,9 @@
         @endguest
     </div>
 
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
@@ -708,6 +848,36 @@
                 });
             });
         });
+
+        // Toast Notification System
+        window.showToast = function(message, type = 'success') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast-notification toast-${type}`;
+            
+            const icon = type === 'success' ? 'bi-check-circle-fill' : 
+                        type === 'error' ? 'bi-exclamation-triangle-fill' : 
+                        type === 'info' ? 'bi-info-circle-fill' : 'bi-bell-fill';
+            
+            toast.innerHTML = `
+                <i class="bi ${icon}"></i>
+                <span>${message}</span>
+                <button class="toast-close" onclick="this.parentElement.remove()">
+                    <i class="bi bi-x"></i>
+                </button>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        };
     </script>
     
     @stack('scripts')

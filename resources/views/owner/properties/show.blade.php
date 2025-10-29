@@ -107,14 +107,13 @@
                         <i class="bi bi-door-open-fill"></i> Rooms & Tasks Management
                     </h5>
                     <div class="btn-group">
-                        @if($defaultRooms->count() > 0 && $property->rooms->count() == 0)
-                            <button class="btn btn-success" 
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#addDefaultRoomsModal"
-                                    type="button">
-                                <i class="bi bi-lightning-charge-fill"></i> Quick Add Default Rooms
-                            </button>
-                        @endif
+                        <button class="btn btn-success" 
+                                data-bs-toggle="modal"
+                                data-bs-target="#addDefaultRoomsModal"
+                                type="button"
+                                {{ $defaultRooms && $defaultRooms->count() > 0 ? '' : 'disabled' }}>
+                            <i class="bi bi-lightning-charge-fill"></i> Quick Add Default Rooms
+                        </button>
                         <button class="btn btn-primary" 
                                 data-bs-toggle="modal"
                                 data-bs-target="#addRoomModal"

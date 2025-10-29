@@ -41,6 +41,7 @@ class TaskController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
             'is_default' => 'required|boolean',
             'property_id' => 'nullable|exists:properties,id',
             'room_id' => 'nullable|exists:rooms,id',
@@ -70,6 +71,7 @@ class TaskController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
             'is_default' => 'required|boolean',
             'property_id' => 'nullable|exists:properties,id',
             'room_id' => 'nullable|exists:rooms,id',

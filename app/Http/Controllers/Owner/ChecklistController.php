@@ -50,7 +50,16 @@ class ChecklistController extends Controller
 
         $checklists = $query->orderBy('created_at', 'desc')->paginate(20);
         
-        $properties = auth()->user()->properties;
+        // Get properties with their readiness status
+        $properties = auth()->user()->properties()->with('rooms.tasks')->get();
+        
+        // Add a flag to indicate if property is ready for assignment
+        $properties->each(function($property) {
+            $property->is_ready = $property->rooms->count() > 0 && 
+                                  $property->rooms->contains(function($room) {
+                                      return $room->tasks->count() > 0;
+                                  });
+        });
 
         return view('owner.checklists.index', compact('checklists', 'properties'));
     }
@@ -74,6 +83,29 @@ class ChecklistController extends Controller
             ->where('role', 'housekeeper')
             ->where('owner_id', auth()->id())
             ->firstOrFail();
+
+        // Check if property has any rooms
+        $roomCount = $property->rooms()->count();
+        if ($roomCount === 0) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Cannot create assignment: This property has no rooms. Please add rooms first.');
+        }
+
+        // Check if property has any tasks assigned to rooms
+        $hasTasksAssigned = false;
+        foreach ($property->rooms as $room) {
+            if ($room->tasks()->count() > 0) {
+                $hasTasksAssigned = true;
+                break;
+            }
+        }
+
+        if (!$hasTasksAssigned) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Cannot create assignment: No tasks have been assigned to any rooms in this property. Please assign tasks to rooms first.');
+        }
 
         Checklist::create([
             'property_id' => $validated['property_id'],

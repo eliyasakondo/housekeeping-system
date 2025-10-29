@@ -27,10 +27,17 @@ class CalendarController extends Controller
 
         // Format for calendar
         $events = $checklists->map(function($checklist) {
+            // Combine date and time if time is set
+            $startDateTime = $checklist->scheduled_date->format('Y-m-d');
+            if ($checklist->scheduled_time) {
+                $startDateTime .= ' ' . $checklist->scheduled_time;
+            }
+
             return [
                 'id' => $checklist->id,
                 'title' => $checklist->property->name,
-                'start' => $checklist->scheduled_date->format('Y-m-d'),
+                'start' => $startDateTime,
+                'allDay' => !$checklist->scheduled_time, // Only all-day if no time is set
                 'backgroundColor' => $this->getStatusColor($checklist->status),
                 'borderColor' => $this->getStatusColor($checklist->status),
                 'url' => route('housekeeper.checklist.show', $checklist),
@@ -39,6 +46,7 @@ class CalendarController extends Controller
                     'address' => $checklist->property->address,
                     'status' => $checklist->status,
                     'checklist_id' => $checklist->id,
+                    'scheduled_time' => $checklist->scheduled_time,
                 ]
             ];
         });

@@ -193,8 +193,16 @@ class RoomController extends Controller
             ->get();
 
         $addedCount = 0;
+        $skippedCount = 0;
+        $existingRoomNames = $property->rooms()->pluck('name')->toArray();
 
         foreach ($defaultRooms as $defaultRoom) {
+            // Check if a room with the same name already exists
+            if (in_array($defaultRoom->name, $existingRoomNames)) {
+                $skippedCount++;
+                continue;
+            }
+
             // Create a copy of the default room for this property
             $newRoom = $property->rooms()->create([
                 'name' => $defaultRoom->name,
@@ -212,7 +220,15 @@ class RoomController extends Controller
             $addedCount++;
         }
 
+        $message = '';
+        if ($addedCount > 0) {
+            $message = $addedCount . ' default room(s) added successfully.';
+        }
+        if ($skippedCount > 0) {
+            $message .= ($addedCount > 0 ? ' ' : '') . $skippedCount . ' room(s) skipped (already exist).';
+        }
+
         return redirect()->route('owner.properties.show', $property)
-            ->with('success', $addedCount . ' default room(s) added successfully.');
+            ->with('success', $message ?: 'No rooms were added.');
     }
 }

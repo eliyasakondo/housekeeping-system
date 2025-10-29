@@ -16,12 +16,21 @@
     <!-- Header Card with Gradient -->
     <div class="card border-0 shadow-lg mb-4" style="background: var(--info-gradient);">
         <div class="card-body py-4">
-            <h2 class="text-white mb-2">
-                <i class="bi bi-calendar-range"></i> System-Wide Cleaning Schedule
-            </h2>
-            <p class="text-white opacity-75 mb-0">
-                <i class="bi bi-info-circle"></i> Monitor all cleaning assignments across all properties and housekeepers
-            </p>
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2 class="text-white mb-2">
+                        <i class="bi bi-calendar-range"></i> System-Wide Cleaning Schedule
+                    </h2>
+                    <p class="text-white opacity-75 mb-0">
+                        <i class="bi bi-info-circle"></i> Monitor and create cleaning assignments across all properties and housekeepers
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-light btn-lg shadow-lg" data-bs-toggle="modal" data-bs-target="#assignModal">
+                        <i class="bi bi-plus-circle-fill"></i> Create Assignment
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -37,7 +46,7 @@
                         <span class="badge bg-secondary fs-6 shadow-sm">
                             <i class="bi bi-hourglass"></i> Pending
                         </span>
-                        <span class="badge bg-warning fs-6 shadow-sm">
+                        <span class="badge bg-info fs-6 shadow-sm">
                             <i class="bi bi-play-circle-fill"></i> In Progress
                         </span>
                         <span class="badge bg-success fs-6 shadow-sm">
@@ -84,6 +93,90 @@
                     <i class="bi bi-x-circle"></i> Close
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignment Modal -->
+<div class="modal fade" id="assignModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-xl">
+            <div class="modal-header border-0 text-white" style="background: var(--primary-gradient);">
+                <h4 class="modal-title">
+                    <i class="bi bi-calendar-plus"></i> Create New Assignment
+                </h4>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="assignForm">
+                @csrf
+                <div class="modal-body p-4">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-building-fill text-primary"></i> Property *
+                        </label>
+                        <select class="form-select form-select-lg" name="property_id" required>
+                            <option value="">-- Select Property --</option>
+                            @foreach($properties as $property)
+                                <option value="{{ $property->id }}">
+                                    {{ $property->name }} (Owner: {{ $property->owner->name }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Choose the property to be cleaned
+                        </small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-person-badge-fill text-success"></i> Housekeeper *
+                        </label>
+                        <select class="form-select form-select-lg" name="housekeeper_id" required>
+                            <option value="">-- Select Housekeeper --</option>
+                            @foreach($housekeepers as $housekeeper)
+                                <option value="{{ $housekeeper->id }}">
+                                    {{ $housekeeper->name }} (Owner: {{ $housekeeper->owner->name ?? 'N/A' }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Assign a housekeeper to this task
+                        </small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-calendar-event text-success"></i> Scheduled Date *
+                        </label>
+                        <input type="date" class="form-control form-control-lg" name="scheduled_date" required min="{{ date('Y-m-d') }}">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> When should the cleaning happen?
+                        </small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-clock text-info"></i> Scheduled Time (Optional)
+                        </label>
+                        <input type="time" class="form-control form-control-lg" name="scheduled_time">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Leave empty for all-day assignment
+                        </small>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-lightbulb"></i> The housekeeper will be notified of this assignment and can view it in their dashboard.
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-secondary btn-lg" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-check-circle-fill"></i> Create Assignment
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -185,6 +278,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <i class="bi bi-calendar-event"></i> <strong>Date:</strong><br>
                                         <span class="ms-4">${new Date(data.checklist.scheduled_date).toLocaleDateString()}</span>
                                     </p>
+                                    ${data.checklist.scheduled_time ? `
+                                        <p class="mb-2">
+                                            <i class="bi bi-clock-fill text-info"></i> <strong>Time:</strong><br>
+                                            <span class="ms-4">${data.checklist.scheduled_time}</span>
+                                        </p>
+                                    ` : ''}
                                     <p class="mb-0">
                                         <i class="${statusIcon}"></i> <strong>Status:</strong><br>
                                         <span class="badge bg-${statusBadge} fs-6 ms-4 mt-1">
@@ -289,6 +388,66 @@ document.addEventListener('DOMContentLoaded', function() {
     function getStatusClass(status) {
         return status === 'completed' ? 'success' : status === 'in_progress' ? 'info' : 'secondary';
     }
+
+    // Handle assignment form submission
+    var assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
+    document.getElementById('assignForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
+
+        fetch('{{ route("admin.calendar.assign") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+            
+            if (data.success) {
+                // Close modal properly with backdrop removal
+                const modalElement = document.getElementById('assignModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+                
+                // Remove any lingering backdrops
+                setTimeout(() => {
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    backdrops.forEach(backdrop => backdrop.remove());
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = '';
+                    document.body.style.paddingRight = '';
+                }, 300);
+                
+                // Refresh calendar and show success message
+                calendar.refetchEvents();
+                showToast(data.message, 'success');
+                this.reset();
+            } else {
+                showToast(data.message || 'Error creating assignment', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('An error occurred while creating the assignment', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        });
+    });
 });
 </script>
 @endpush
+

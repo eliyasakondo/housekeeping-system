@@ -98,13 +98,21 @@
                         <select class="form-select form-select-lg" name="property_id" required>
                             <option value="">-- Select Property --</option>
                             @foreach($properties as $property)
-                                <option value="{{ $property->id }}">
-                                    <i class="bi bi-house-door"></i> {{ $property->name }}
+                                <option value="{{ $property->id }}" {{ !$property->is_ready ? 'disabled' : '' }}>
+                                    {{ $property->name }}
+                                    @if(!$property->is_ready)
+                                        -  Not Ready (No tasks assigned)
+                                    @else
+                                        ✓
+                                    @endif
                                 </option>
                             @endforeach
                         </select>
                         <small class="text-muted">
                             <i class="bi bi-info-circle"></i> Choose which property to clean
+                            @if($properties->where('is_ready', false)->count() > 0)
+                                <br><span class="text-warning"><i class="bi bi-exclamation-triangle"></i> Some properties are not ready because they have no tasks assigned to rooms.</span>
+                            @endif
                         </small>
                     </div>
 
@@ -269,6 +277,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const formData = new FormData(this);
         const data = Object.fromEntries(formData.entries());
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
 
         fetch('{{ route("owner.calendar.assign") }}', {
             method: 'POST',
@@ -278,18 +291,46 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: JSON.stringify(data)
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.message || 'Error creating assignment');
+                });
+            }
+            return response.json();
+        })
         .then(data => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+            
             if (data.success) {
-                assignModal.hide();
+                // Close modal properly with backdrop removal
+                const modalElement = document.getElementById('assignModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+                
+                // Remove any lingering backdrops
+                setTimeout(() => {
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    backdrops.forEach(backdrop => backdrop.remove());
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = '';
+                    document.body.style.paddingRight = '';
+                }, 300);
+                
                 this.reset();
-                alert('Assignment created successfully!');
-                // Force page reload to show new assignment
-                window.location.reload();
+                showToast('Assignment created successfully!', 'success');
+                
+                // Refresh calendar instead of page reload
+                calendar.refetchEvents();
             }
         })
         .catch(error => {
-            alert('Error creating assignment');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+            showToast(error.message || 'Error creating assignment', 'error');
             console.error(error);
         });
     });
@@ -339,6 +380,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <i class="bi bi-calendar-event"></i> <strong>Scheduled Date:</strong><br>
                                         <span class="ms-4">${new Date(data.checklist.scheduled_date).toLocaleDateString()}</span>
                                     </p>
+                                    ${data.checklist.scheduled_time ? `
+                                        <p class="mb-2">
+                                            <i class="bi bi-clock-fill text-info"></i> <strong>Scheduled Time:</strong><br>
+                                            <span class="ms-4">${data.checklist.scheduled_time}</span>
+                                        </p>
+                                    ` : ''}
                                     <p class="mb-2">
                                         <i class="${statusIcon}"></i> <strong>Status:</strong><br>
                                         <span class="badge bg-${statusBadge} fs-6 ms-4 mt-1">
@@ -416,8 +463,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 detailsModal.hide();
                 calendar.refetchEvents();
-                alert('Assignment deleted successfully!');
+                showToast('Assignment deleted successfully!', 'success');
+            } else {
+                showToast(data.message || 'Error deleting assignment', 'error');
             }
+        })
+        .catch(error => {
+            showToast('Error deleting assignment', 'error');
+            console.error(error);
         });
     });
 
