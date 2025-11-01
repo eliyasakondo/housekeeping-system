@@ -257,5 +257,114 @@
 .btn-lg {
     padding: 1rem 2rem;
 }
+
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+}
 </style>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('assignForm');
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        // Disable button and show loading
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
+        
+        // Convert FormData to JSON
+        const data = {};
+        formData.forEach((value, key) => {
+            data[key] = value;
+        });
+        
+        fetch('{{ route("owner.calendar.assign") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.message || 'An error occurred');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                showAlert('success', data.message || 'Assignment created successfully!');
+                
+                // Reset form
+                form.reset();
+                
+                // Redirect to calendar after 1.5 seconds
+                setTimeout(() => {
+                    window.location.href = '{{ route("owner.calendar") }}';
+                }, 1500);
+            } else {
+                // Show error message
+                showAlert('danger', data.message || 'An error occurred while creating the assignment.');
+                
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Show error message
+            const message = error.message || 'An error occurred while creating the assignment.';
+            showAlert('danger', message);
+            
+            // Re-enable button
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        });
+    });
+    
+    function showAlert(type, message) {
+        // Remove any existing alerts
+        const existingAlerts = document.querySelectorAll('.alert-dismissible');
+        existingAlerts.forEach(alert => alert.remove());
+        
+        // Create new alert
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show mb-3`;
+        alertDiv.setAttribute('role', 'alert');
+        alertDiv.innerHTML = `
+            <i class="bi bi-${type === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // Insert at the top of the page content
+        const container = document.querySelector('.container-fluid .row .col-12');
+        const firstElement = container.firstElementChild.nextElementSibling; // After the header
+        container.insertBefore(alertDiv, firstElement);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            alertDiv.classList.remove('show');
+            setTimeout(() => alertDiv.remove(), 150);
+        }, 5000);
+    }
+});
+</script>
+@endpush

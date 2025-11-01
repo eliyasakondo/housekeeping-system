@@ -98,10 +98,13 @@
                         <select class="form-select form-select-lg" name="property_id" required>
                             <option value="">-- Select Property --</option>
                             @foreach($properties as $property)
-                                <option value="{{ $property->id }}" {{ !$property->is_ready ? 'disabled' : '' }}>
+                                @php
+                                    $isDisabled = !$property->is_ready;
+                                @endphp
+                                <option value="{{ $property->id }}" {{ $isDisabled ? 'disabled' : '' }}>
                                     {{ $property->name }}
                                     @if(!$property->is_ready)
-                                        -  Not Ready (No tasks assigned)
+                                        - ⚠️ No Tasks Assigned
                                     @else
                                         ✓
                                     @endif
@@ -110,8 +113,11 @@
                         </select>
                         <small class="text-muted">
                             <i class="bi bi-info-circle"></i> Choose which property to clean
-                            @if($properties->where('is_ready', false)->count() > 0)
-                                <br><span class="text-warning"><i class="bi bi-exclamation-triangle"></i> Some properties are not ready because they have no tasks assigned to rooms.</span>
+                            @php
+                                $notReadyCount = $properties->where('is_ready', false)->count();
+                            @endphp
+                            @if($notReadyCount > 0)
+                                <br><span class="text-danger"><i class="bi bi-exclamation-triangle"></i> {{ $notReadyCount }} property(ies) have no rooms or tasks assigned.</span>
                             @endif
                         </small>
                     </div>
@@ -476,6 +482,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function getStatusClass(status) {
         return status === 'completed' ? 'success' : status === 'in_progress' ? 'info' : 'secondary';
+    }
+    
+    function showToast(message, type = 'info') {
+        // Remove existing toasts
+        const existingToasts = document.querySelectorAll('.toast');
+        existingToasts.forEach(toast => toast.remove());
+        
+        // Create toast container if it doesn't exist
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            toastContainer.style.zIndex = '9999';
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Create toast
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} border-0`;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-${type === 'success' ? 'check-circle-fill' : type === 'error' ? 'exclamation-triangle-fill' : 'info-circle-fill'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        toastContainer.appendChild(toastEl);
+        const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+        toast.show();
+        
+        // Remove after hidden
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
     }
 });
 </script>

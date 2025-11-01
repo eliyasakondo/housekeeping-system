@@ -240,14 +240,25 @@ document.getElementById('assignForm').addEventListener('submit', function(e) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
         },
         body: JSON.stringify(data)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || 'An error occurred');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
-            showToast(data.message, 'success');
+            // Show success message
+            showAlert('success', data.message || 'Assignment created successfully!');
+            
+            // Reset form
             this.reset();
             
             // Redirect to calendar after 1.5 seconds
@@ -255,17 +266,51 @@ document.getElementById('assignForm').addEventListener('submit', function(e) {
                 window.location.href = '{{ route("admin.calendar") }}';
             }, 1500);
         } else {
-            showToast(data.message || 'Error creating assignment', 'error');
+            // Show error message
+            showAlert('danger', data.message || 'An error occurred while creating the assignment.');
+            
+            // Re-enable button
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalText;
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showToast('An error occurred while creating the assignment', 'error');
+        // Show error message
+        const message = error.message || 'An error occurred while creating the assignment.';
+        showAlert('danger', message);
+        
+        // Re-enable button
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;
     });
 });
+
+function showAlert(type, message) {
+    // Remove any existing alerts
+    const existingAlerts = document.querySelectorAll('.alert-dismissible');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    // Create new alert
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show mb-3`;
+    alertDiv.setAttribute('role', 'alert');
+    alertDiv.innerHTML = `
+        <i class="bi bi-${type === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Insert at the top of the page content
+    const container = document.querySelector('.container-fluid .row .col-12');
+    const firstElement = container.firstElementChild.nextElementSibling; // After the header
+    container.insertBefore(alertDiv, firstElement);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        alertDiv.classList.remove('show');
+        setTimeout(() => alertDiv.remove(), 150);
+    }, 5000);
+}
 </script>
 @endsection
